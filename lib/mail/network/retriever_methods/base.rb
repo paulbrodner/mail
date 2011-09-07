@@ -58,6 +58,13 @@ module Mail
       find(options, &block)      
     end 
 
+    # return the total number of mails from mailbox
+    # 
+    def total_emails(mailbox='INBOX', attr=["MESSAGES"])
+      mail_status mailbox,attr
+    end
+
+    
   end
 
 end

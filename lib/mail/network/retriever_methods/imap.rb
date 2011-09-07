@@ -37,11 +37,11 @@ module Mail
     
     def initialize(values)
       self.settings = { :address              => "localhost",
-                        :port                 => 143,
-                        :user_name            => nil,
-                        :password             => nil,
-                        :authentication       => nil,
-                        :enable_ssl           => false }.merge!(values)
+        :port                 => 143,
+        :user_name            => nil,
+        :password             => nil,
+        :authentication       => nil,
+        :enable_ssl           => false }.merge!(values)
     end
 
     attr_accessor :settings
@@ -67,7 +67,7 @@ module Mail
         message_ids.reverse! if options[:what].to_sym == :last
         message_ids = message_ids.first(options[:count]) if options[:count].is_a?(Integer)
         message_ids.reverse! if (options[:what].to_sym == :last && options[:order].to_sym == :asc) ||
-                                (options[:what].to_sym != :last && options[:order].to_sym == :desc)
+          (options[:what].to_sym != :last && options[:order].to_sym == :desc)
 
         if block_given?
           message_ids.each do |message_id|
@@ -118,41 +118,82 @@ module Mail
       end
     end
 
+    # return the status from mailbox (INBOX or other folder)
+    # Supported attributes (attr) include:
+    #   MESSAGES:: the number of messages in the mailbox.
+    #   RECENT:: the number of recent messages in the mailbox.
+    #   UNSEEN:: the number of unseen messages in the mailbox.
+    def mail_status(mailbox, attr)
+      start do |imap|
+        imap.status(mailbox, attr)
+      end
+    end
+
+    # get the mail from mailbox associated with the message sequence number
+    # 
+    # Message sequence numbers number messages within a mail box
+    # from 1 up to the number of items in the mail box.  If new
+    # message arrives during a session, it receives a sequence
+    # number equal to the new size of the mail box.  If messages
+    # are expunged from the mailbox, remaining messages have their
+    # sequence numbers "shuffled down" to fill the gaps.
+    # 
+    # The +set+ parameter is a number or an array of
+    # numbers or a Range object
+    def get_mail(set,mailbox='INBOX')
+      emails = []
+      start do |imap|
+        imap.select(mailbox)
+        imap.fetch(set, ['RFC822']).each do |data|
+          emails << Mail.new(data.attr['RFC822'])
+        end
+        emails
+      end
+    end
+
+    # this will return only the subject
+    def get_header_info(set,mailbox='INBOX')
+      start do |imap|
+        imap.select(mailbox)
+        imap.fetch(set, "BODY[HEADER.FIELDS (SUBJECT)]")
+      end
+    end
+    
     private
 
-      # Set default options
-      def validate_options(options)
-        options ||= {}
-        options[:mailbox] ||= 'INBOX'
-        options[:count]   ||= 10
-        options[:order]   ||= :asc
-        options[:what]    ||= :first
-        options[:keys]    ||= 'ALL'
-        options[:delete_after_find] ||= false
-        options[:mailbox] = Net::IMAP.encode_utf7(options[:mailbox])
+    # Set default options
+    def validate_options(options)
+      options ||= {}
+      options[:mailbox] ||= 'INBOX'
+      options[:count]   ||= 10
+      options[:order]   ||= :asc
+      options[:what]    ||= :first
+      options[:keys]    ||= 'ALL'
+      options[:delete_after_find] ||= false
+      options[:mailbox] = Net::IMAP.encode_utf7(options[:mailbox])
 
-        options
+      options
+    end
+
+    # Start an IMAP session and ensures that it will be closed in any case.
+    def start(config=Mail::Configuration.instance, &block)
+      raise ArgumentError.new("Mail::Retrievable#imap_start takes a block") unless block_given?
+
+      imap = Net::IMAP.new(settings[:address], settings[:port], settings[:enable_ssl], nil, false)
+      if settings[:authentication].nil?
+        imap.login(settings[:user_name], settings[:password])
+      else
+        # Note that Net::IMAP#authenticate('LOGIN', ...) is not equal with Net::IMAP#login(...)!
+        # (see also http://www.ensta.fr/~diam/ruby/online/ruby-doc-stdlib/libdoc/net/imap/rdoc/classes/Net/IMAP.html#M000718)
+        imap.authenticate(settings[:authentication], settings[:user_name], settings[:password])
       end
 
-      # Start an IMAP session and ensures that it will be closed in any case.
-      def start(config=Mail::Configuration.instance, &block)
-        raise ArgumentError.new("Mail::Retrievable#imap_start takes a block") unless block_given?
-
-        imap = Net::IMAP.new(settings[:address], settings[:port], settings[:enable_ssl], nil, false)
-        if settings[:authentication].nil?
-          imap.login(settings[:user_name], settings[:password])
-        else
-          # Note that Net::IMAP#authenticate('LOGIN', ...) is not equal with Net::IMAP#login(...)!
-          # (see also http://www.ensta.fr/~diam/ruby/online/ruby-doc-stdlib/libdoc/net/imap/rdoc/classes/Net/IMAP.html#M000718)
-          imap.authenticate(settings[:authentication], settings[:user_name], settings[:password])
-        end
-
-        yield imap
-      ensure
-        if defined?(imap) && imap && !imap.disconnected?
-          imap.disconnect
-        end
+      yield imap
+    ensure
+      if defined?(imap) && imap && !imap.disconnected?
+        imap.disconnect
       end
+    end
 
   end
 end

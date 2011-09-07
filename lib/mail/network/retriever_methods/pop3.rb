@@ -107,6 +107,13 @@ module Mail
       end
     end
     
+    def mail_status(mailbox=nil, attr=nil)
+      start do |pop|
+        pop.stat
+      end
+    end
+
+
   private
   
     # Set default options
