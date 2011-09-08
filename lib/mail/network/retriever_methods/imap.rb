@@ -141,13 +141,9 @@ module Mail
     # The +set+ parameter is a number or an array of
     # numbers or a Range object
     def get_mail(set,mailbox='INBOX')
-      emails = []
       start do |imap|
         imap.select(mailbox)
-        imap.fetch(set, ['RFC822']).each do |data|
-          emails << Mail.new(data.attr['RFC822'])
-        end
-        emails
+        query_mail(set,imap)
       end
     end
 
@@ -155,12 +151,56 @@ module Mail
     def get_header_info(set,mailbox='INBOX')
       start do |imap|
         imap.select(mailbox)
-        imap.fetch(set, "BODY[HEADER.FIELDS (SUBJECT)]")
+        imap.fetch(set, ["BODY[HEADER.FIELDS (SUBJECT)]","ENVELOPE"])
+      end
+    end
+
+    # return the mail based on UID
+    def get_mail_by_uid(uid, mailbox='INBOX')
+      start do |imap|
+        imap.select(mailbox)
+        query_mail_by_uid(uid,imap)
+      end
+    end
+
+    # given uid_array return all mails
+    # returns the array of all emails
+    def get_mails_by_uids(uid_array,mailbox='INBOX')
+      mails = []
+      start do |imap|
+        imap.select(mailbox)
+        uid_array.each do |uid|
+          mails << query_mail_by_uid(uid,imap)
+        end
+      end
+      mails
+    end
+
+    private
+
+    def query_uid_mail(uid,imap_object)
+      imap_object.search("HEADER Message-ID #{uid}")
+    end
+
+    def query_mail(set,imap_object)
+      emails = []
+      imap_object.fetch(set, ['RFC822']).each do |data|
+        emails << Mail.new(data.attr['RFC822'])
+      end
+      emails
+    end
+
+    def query_mail_by_uid(uid,imap_object)
+      # first get the sequence number of the message
+      seq = query_uid_mail(uid,imap_object)
+      #then get the email based on this sequence number
+      if seq.nil?
+        return
+      else
+        query_mail(seq,imap_object).at(0)
       end
     end
     
-    private
-
     # Set default options
     def validate_options(options)
       options ||= {}
