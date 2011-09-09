@@ -123,9 +123,9 @@ module Mail
     #   MESSAGES:: the number of messages in the mailbox.
     #   RECENT:: the number of recent messages in the mailbox.
     #   UNSEEN:: the number of unseen messages in the mailbox.
-    def mail_status(mailbox, attr)
+    def mail_status(mailbox='INBOX')
       start do |imap|
-        imap.status(mailbox, attr)
+        imap.status(mailbox, ["MESSAGES"])["MESSAGES"]
       end
     end
 

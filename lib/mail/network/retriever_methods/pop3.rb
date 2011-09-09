@@ -36,11 +36,11 @@ module Mail
 
     def initialize(values)
       self.settings = { :address              => "localhost",
-                        :port                 => 110,
-                        :user_name            => nil,
-                        :password             => nil,
-                        :authentication       => nil,
-                        :enable_ssl           => false }.merge!(values)
+        :port                 => 110,
+        :user_name            => nil,
+        :password             => nil,
+        :authentication       => nil,
+        :enable_ssl           => false }.merge!(values)
     end
     
     attr_accessor :settings
@@ -65,8 +65,8 @@ module Mail
         mails = mails.first(options[:count]) if options[:count].is_a? Integer
         
         if options[:what].to_sym == :last && options[:order].to_sym == :desc ||
-           options[:what].to_sym == :first && options[:order].to_sym == :asc ||
-          mails.reverse!
+            options[:what].to_sym == :first && options[:order].to_sym == :asc ||
+            mails.reverse!
         end
         
         if block_given?
@@ -107,14 +107,25 @@ module Mail
       end
     end
     
-    def mail_status(mailbox=nil, attr=nil)
+    def mail_status
       start do |pop|
-        pop.stat
+        puts "mail status"
+        pop.n_mails
       end
     end
 
+    def get_mail_by_uid(uid)
+      start do |pop|
+        pop.each_mail do |m|
+          puts "===="
+          puts m.header.split("\r\n").grep(/^Subject:/)
+          puts m.header.split("\r\n").grep(/^Message-ID:/)
+          return Mail.new(m.pop) if m.unique_id.eql?(uid)
+        end
+      end
+    end
 
-  private
+    private
   
     # Set default options
     def validate_options(options)

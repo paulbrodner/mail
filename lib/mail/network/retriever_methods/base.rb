@@ -60,8 +60,8 @@ module Mail
 
     # return the total number of mails from mailbox
     # 
-    def total_emails(mailbox='INBOX', attr=["MESSAGES"])
-      mail_status mailbox,attr
+    def total_emails
+      mail_status
     end
 
     
