@@ -109,24 +109,47 @@ module Mail
     
     def mail_status
       start do |pop|
-        puts "mail status"
         pop.n_mails
       end
     end
 
-    def get_mail_by_uid(uid)
+    def get_mail(set)
+      emails = []
       start do |pop|
-        pop.each_mail do |m|
-          puts "===="
-          puts m.header.split("\r\n").grep(/^Subject:/)
-          puts m.header.split("\r\n").grep(/^Message-ID:/)
-          return Mail.new(m.pop) if m.unique_id.eql?(uid)
+        puts "starting get_mail pop"
+        pop.each_mail.select{ |m| set.cover? m.number }.each do |mail|
+          #Mail.new(mail.pop) #<- this will make the message 'read' on server
+          emails << Mail.new(return_mail(mail))
         end
+      end
+      emails
+    end
+
+   
+
+
+    def get_mails_by_uids(uid_array)
+      mails = []
+      start do |pop|
+        uid_array.each do |uid|
+          mails << guery_mail_by_uid(uid,pop)
+        end
+      end
+      mails
+    end
+    private
+    
+    def guery_mail_by_uid(uid,pop_object)
+      puts "pop3 guery_mail_by_uid  #{uid}"
+      pop_object.each_mail.select{ |m| h=m.header.split("\r\n").grep(/^Message-ID:/); puts m.header;puts "---"; h.join("").include?(uid)}.each do |mail|
+        puts "found"
+        return Mail.new(return_mail(mail))
       end
     end
 
-    private
-  
+    def return_mail(mail)
+      mail.top 999999
+    end
     # Set default options
     def validate_options(options)
       options ||= {}
