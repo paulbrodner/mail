@@ -116,15 +116,12 @@ module Mail
     def get_mail(set)
       emails = []
       start do |pop|
-        puts "starting get_mail pop"
         pop.each_mail.select{ |m| set.cover? m.number }.each do |mail|
-          #Mail.new(mail.pop) #<- this will make the message 'read' on server
-          emails << Mail.new(return_mail(mail))
+          emails << return_mail(mail)
         end
       end
       emails
     end
-
    
 
 
@@ -140,15 +137,17 @@ module Mail
     private
     
     def guery_mail_by_uid(uid,pop_object)
-      puts "pop3 guery_mail_by_uid  #{uid}"
-      pop_object.each_mail.select{ |m| h=m.header.split("\r\n").grep(/^Message-ID:/); puts m.header;puts "---"; h.join("").include?(uid)}.each do |mail|
-        puts "found"
-        return Mail.new(return_mail(mail))
+      #pop_object.each_mail.select{ |m| h=m.header.split("\r\n").grep(/^Message-ID:/); puts h; puts m.unique_id; "---"; h.join("").include?(uid)}.each do |mail|
+      pop_object.each_mail.select{ |m| m.unique_id.eql?(uid)}.each do |mail|
+        return return_mail(mail)
       end
     end
 
     def return_mail(mail)
-      mail.top 999999
+      #Mail.new(mail.pop) #<- this will make the message 'read' on server
+      m_obj = Mail.new(mail.top(999999))
+      m_obj.message_id = mail.unique_id
+      m_obj
     end
     # Set default options
     def validate_options(options)
