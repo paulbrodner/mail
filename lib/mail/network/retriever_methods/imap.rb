@@ -176,6 +176,16 @@ module Mail
       mails
     end
 
+    def search_mail(search, mailbox='INBOX')
+      mails = []
+      start do |imap|
+        imap.examine(mailbox)
+        imap.search(search).each { |mail_id|
+          mails << query_mail(mail_id,imap).at(0)
+        }
+      end
+      mails
+    end
     private
 
     def query_uid_mail(uid,imap_object)
