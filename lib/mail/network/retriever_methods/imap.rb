@@ -147,6 +147,27 @@ module Mail
       end
     end
 
+    def search_mail(search,seq_range, mailbox='INBOX')
+      mails = []
+      start do |imap|
+        imap.examine(mailbox)
+        #imap.search(search).select{ |m| seq_range.cover?(m) }.each { |mail_id|
+        idx = 0 
+        imap.search(search).select{ idx +=1; seq_range.cover?(idx) }.each { |mail_id|
+          mails << query_mail(mail_id,imap).at(0)
+        }
+      end
+      mails
+    end
+
+
+    def total_emails_filtered(search, mailbox='INBOX')
+      start do |imap|
+        imap.examine(mailbox)
+        imap.search(search).count
+      end
+    end
+    
     # this will return only the subject
     def get_header_info(set,mailbox='INBOX')
       start do |imap|
@@ -176,16 +197,7 @@ module Mail
       mails
     end
 
-    def search_mail(search, mailbox='INBOX')
-      mails = []
-      start do |imap|
-        imap.examine(mailbox)
-        imap.search(search).each { |mail_id|
-          mails << query_mail(mail_id,imap).at(0)
-        }
-      end
-      mails
-    end
+   
     private
 
     def query_uid_mail(uid,imap_object)
